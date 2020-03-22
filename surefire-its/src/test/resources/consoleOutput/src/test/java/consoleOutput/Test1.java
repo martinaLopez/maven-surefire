@@ -22,6 +22,8 @@ package consoleOutput;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Before;
+import org.junit.After;
 
 import static org.junit.Assert.fail;
 
@@ -48,6 +50,18 @@ public class Test1
 
     public Test1(){
        System.out.println("In constructor");
+    }
+
+    @Before
+    public void t1()
+    {
+        System.out.println( "t1 = " + System.currentTimeMillis() );
+    }
+
+    @After
+    public void t2()
+    {
+        System.out.println( "t2 = " + System.currentTimeMillis() );
     }
 
     @Test
