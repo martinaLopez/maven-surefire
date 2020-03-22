@@ -382,6 +382,9 @@ public final class ForkedBooter
 
     private void acknowledgedExit()
     {
+        //noinspection ResultOfMethodCallIgnored
+        Thread.interrupted();
+
         commandReader.addByeAckListener( new CommandListener()
                                           {
                                               @Override

@@ -637,9 +637,9 @@ public class ForkStarter
             out = forkChannel.bindEventHandler( eventConsumer, countdownCloseable, streams.getStdOutChannel() );
             out.start();
 
-            EventHandler<String> stdErrConsumer = new NativeStdErrStreamConsumer( reporter );
+            EventHandler<String> errConsumer = new NativeStdErrStreamConsumer( reporter );
             err = new LineConsumerThread( "fork-" + forkNumber + "-err-thread-", streams.getStdErrChannel(),
-                stdErrConsumer, countdownCloseable );
+                errConsumer, countdownCloseable );
             err.start();
 
             result = exec.awaitExit();

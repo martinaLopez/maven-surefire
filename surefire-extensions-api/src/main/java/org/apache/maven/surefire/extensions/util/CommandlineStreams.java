@@ -27,8 +27,8 @@ import java.nio.channels.Channel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-import static java.nio.channels.Channels.newChannel;
-import static org.apache.maven.surefire.extensions.util.FlushableWritableByteChannel.newFlushableChannel;
+import static org.apache.maven.surefire.util.internal.Channels.newChannel;
+import static org.apache.maven.surefire.util.internal.Channels.newFlushableChannel;
 
 /**
  *
@@ -44,8 +44,10 @@ public final class CommandlineStreams implements Closeable
     {
         InputStream stdOutStream = process.getInputStream();
         stdOutChannel = newChannel( stdOutStream );
+
         InputStream stdErrStream = process.getErrorStream();
         stdErrChannel = newChannel( stdErrStream );
+
         stdInChannel = newFlushableChannel( process.getOutputStream() );
     }
 

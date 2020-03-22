@@ -289,23 +289,27 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
 
     private void encodeAndPrintEvent( StringBuilder event )
     {
-        byte[] array = event.append( '\n' ).toString().getBytes( STREAM_ENCODING );
-        synchronized ( out )
+        try
         {
-            try
-            {
-                out.write( ByteBuffer.wrap( array ) );
-            }
-            catch ( ClosedChannelException e )
-            {
-                DumpErrorSingleton.getSingleton()
-                    .dumpText( "Channel closed while writing the event '" + event + "'." );
-            }
-            catch ( IOException e )
-            {
-                DumpErrorSingleton.getSingleton().dumpException( e );
-                trouble = true;
-            }
+            //noinspection ResultOfMethodCallIgnored
+            Thread.interrupted();
+
+            byte[] array = event.append( '\n' )
+                .toString()
+                .getBytes( STREAM_ENCODING );
+
+            out.write( ByteBuffer.wrap( array ) );
+        }
+        catch ( ClosedChannelException e )
+        {
+            DumpErrorSingleton.getSingleton()
+                .dumpException( e, "Channel closed while writing the event '" + event + "'." );
+        }
+        catch ( IOException e )
+        {
+            DumpErrorSingleton.getSingleton()
+                .dumpException( e );
+            trouble = true;
         }
     }
 
