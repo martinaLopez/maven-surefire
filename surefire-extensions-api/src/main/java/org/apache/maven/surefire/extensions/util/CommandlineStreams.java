@@ -24,6 +24,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channel;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
@@ -79,6 +80,10 @@ public final class CommandlineStreams implements Closeable
               Channel c3 = stdInChannel )
         {
             closed = true;
+        }
+        catch ( ClosedChannelException e )
+        {
+            // already closed externally
         }
     }
 }
