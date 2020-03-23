@@ -60,8 +60,6 @@ import static java.nio.channels.ServerSocketChannel.open;
  */
 final class SurefireForkChannel extends ForkChannel
 {
-    private static final byte[] LOCAL_LOOPBACK_IP_ADDRESS = new byte[]{127, 0, 0, 1};
-
     private final ConsoleLogger logger;
     private final ServerSocketChannel server;
     private final int localPort;
@@ -73,7 +71,7 @@ final class SurefireForkChannel extends ForkChannel
         this.logger = logger;
         server = open();
         setTrueOptions( SO_REUSEADDR, TCP_NODELAY, SO_KEEPALIVE );
-        InetAddress ip = Inet4Address.getByAddress( LOCAL_LOOPBACK_IP_ADDRESS );
+        InetAddress ip = Inet4Address.getLoopbackAddress();
         server.bind( new InetSocketAddress( ip, 0 ), 1 );
         localPort = ( (InetSocketAddress) server.getLocalAddress() ).getPort();
     }

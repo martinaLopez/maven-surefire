@@ -126,8 +126,9 @@ public class EventConsumerThread extends CloseableDaemonThread
         List<String> tokens = new ArrayList<>();
         StringBuilder line = new StringBuilder();
         StringBuilder token = new StringBuilder( MAGIC_NUMBER.length() );
-        ByteBuffer buffer = ByteBuffer.allocate( 1 );
-        boolean endOfStream;
+        ByteBuffer buffer = ByteBuffer.allocate( 1024 );
+        buffer.position( buffer.limit() );
+        boolean streamContinues;
 
         start:
         do
@@ -136,11 +137,9 @@ public class EventConsumerThread extends CloseableDaemonThread
             tokens.clear();
             token.setLength( 0 );
             FrameCompletion completion = null;
-            for ( boolean frameStarted = false; !( endOfStream = channel.read( buffer ) == -1 ) ; completion = null )
+            for ( boolean frameStarted = false; streamContinues = read( buffer ); completion = null )
             {
-                buffer.flip();
                 char c = (char) buffer.get();
-                buffer.clear();
 
                 if ( c == '\n' || c == '\r' )
                 {
@@ -193,13 +192,28 @@ public class EventConsumerThread extends CloseableDaemonThread
                 }
             }
 
-            if ( endOfStream )
+            if ( !streamContinues )
             {
                 printExistingLine( line );
                 return;
             }
         }
         while ( true );
+    }
+
+    private boolean read( ByteBuffer buffer ) throws IOException
+    {
+        if ( buffer.hasRemaining() )
+        {
+            return true;
+        }
+        else
+        {
+            buffer.clear();
+            boolean isEndOfStream = channel.read( buffer ) == -1;
+            buffer.flip();
+            return !isEndOfStream;
+        }
     }
 
     private void printExistingLine( StringBuilder line )
