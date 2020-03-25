@@ -65,7 +65,7 @@ final class SurefireForkChannel extends ForkChannel
     private final int localPort;
     private volatile SocketChannel channel;
 
-    SurefireForkChannel( int forkChannelId, ConsoleLogger logger ) throws IOException
+    SurefireForkChannel( int forkChannelId, @Nonnull ConsoleLogger logger ) throws IOException
     {
         super( forkChannelId );
         this.logger = logger;
