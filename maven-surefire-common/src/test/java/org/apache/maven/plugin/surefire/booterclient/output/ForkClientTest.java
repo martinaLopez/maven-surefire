@@ -66,7 +66,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.nio.channels.Channels.newChannel;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.commons.codec.binary.Base64.encodeBase64String;
+import static org.apache.maven.surefire.shared.codec.binary.Base64.encodeBase64String;
 import static org.apache.maven.plugin.surefire.booterclient.MockReporter.CONSOLE_DEBUG;
 import static org.apache.maven.plugin.surefire.booterclient.MockReporter.CONSOLE_ERR;
 import static org.apache.maven.plugin.surefire.booterclient.MockReporter.CONSOLE_INFO;

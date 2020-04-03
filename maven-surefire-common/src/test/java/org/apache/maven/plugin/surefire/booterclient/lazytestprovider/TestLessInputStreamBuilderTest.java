@@ -22,7 +22,7 @@ package org.apache.maven.plugin.surefire.booterclient.lazytestprovider;
 import org.apache.maven.surefire.booter.Command;
 import org.apache.maven.surefire.booter.MasterProcessCommand;
 import org.apache.maven.surefire.booter.spi.LegacyMasterProcessChannelDecoder;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelDecoder;
+import org.apache.maven.surefire.booter.MasterProcessChannelDecoder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;

@@ -28,21 +28,30 @@ import org.apache.maven.surefire.extensions.ForkChannel;
 import org.apache.maven.surefire.extensions.util.CountdownCloseable;
 
 import javax.annotation.Nonnull;
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketOption;
-import java.nio.channels.Channel;
+import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static java.net.StandardSocketOptions.SO_KEEPALIVE;
 import static java.net.StandardSocketOptions.SO_REUSEADDR;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
-import static java.nio.channels.ServerSocketChannel.open;
+import static java.nio.channels.AsynchronousChannelGroup.withThreadPool;
+import static java.nio.channels.AsynchronousServerSocketChannel.open;
+import static org.apache.maven.surefire.util.internal.Channels.newBufferedChannel;
+import static org.apache.maven.surefire.util.internal.Channels.newChannel;
+import static org.apache.maven.surefire.util.internal.Channels.newInputStream;
+import static org.apache.maven.surefire.util.internal.Channels.newOutputStream;
+import static org.apache.maven.surefire.util.internal.DaemonThreadFactory.newDaemonThreadFactory;
 
 /**
  * The TCP/IP server accepting only one client connection. The forked JVM connects to the server using the
@@ -60,34 +69,52 @@ import static java.nio.channels.ServerSocketChannel.open;
  */
 final class SurefireForkChannel extends ForkChannel
 {
+    private static final ExecutorService THREAD_POOL = Executors.newCachedThreadPool( newDaemonThreadFactory() );
+
     private final ConsoleLogger logger;
-    private final ServerSocketChannel server;
+    private final AsynchronousServerSocketChannel server;
+    private final String localHost;
     private final int localPort;
-    private volatile SocketChannel channel;
+    private volatile AsynchronousSocketChannel worker;
 
     SurefireForkChannel( int forkChannelId, @Nonnull ConsoleLogger logger ) throws IOException
     {
         super( forkChannelId );
         this.logger = logger;
-        server = open();
+        server = open( withThreadPool( THREAD_POOL ) );
         setTrueOptions( SO_REUSEADDR, TCP_NODELAY, SO_KEEPALIVE );
         InetAddress ip = Inet4Address.getLoopbackAddress();
         server.bind( new InetSocketAddress( ip, 0 ), 1 );
-        localPort = ( (InetSocketAddress) server.getLocalAddress() ).getPort();
+        InetSocketAddress localAddress = (InetSocketAddress) server.getLocalAddress();
+        localHost = localAddress.getHostString();
+        localPort = localAddress.getPort();
     }
 
     @Override
     public void connectToClient() throws IOException
     {
-        if ( channel != null )
+        if ( worker != null )
         {
             throw new IllegalStateException( "already accepted TCP client connection" );
         }
-        channel = server.accept();
+
+        try
+        {
+            worker = server.accept().get();
+        }
+        catch ( InterruptedException e )
+        {
+            throw new IOException( e.getLocalizedMessage(), e );
+        }
+        catch ( ExecutionException e )
+        {
+            throw new IOException( e.getLocalizedMessage(), e.getCause() );
+        }
     }
 
     @SafeVarargs
-    private final void setTrueOptions( SocketOption<Boolean>... options ) throws IOException
+    private final void setTrueOptions( SocketOption<Boolean>... options )
+        throws IOException
     {
         for ( SocketOption<Boolean> option : options )
         {
@@ -101,7 +128,7 @@ final class SurefireForkChannel extends ForkChannel
     @Override
     public String getForkNodeConnectionString()
     {
-        return "tcp://127.0.0.1:" + localPort;
+        return "tcp://" + localHost + ":" + localPort;
     }
 
     @Override
@@ -114,6 +141,10 @@ final class SurefireForkChannel extends ForkChannel
     public CloseableDaemonThread bindCommandReader( @Nonnull CommandReader commands,
                                                     WritableByteChannel stdIn )
     {
+        // dont use newBufferedChannel here - may cause the command is not sent and the JVM hangs
+        // only newChannel flushes the message
+        // newBufferedChannel does not flush
+        WritableByteChannel channel = newChannel( newOutputStream( worker ) );
         return new StreamFeeder( "commands-fork-" + getForkChannelId(), channel, commands, logger );
     }
 
@@ -122,6 +153,7 @@ final class SurefireForkChannel extends ForkChannel
                                                    @Nonnull CountdownCloseable countdownCloseable,
                                                    ReadableByteChannel stdOut )
     {
+        ReadableByteChannel channel = newBufferedChannel( newInputStream( worker ) );
         return new EventConsumerThread( "fork-" + getForkChannelId() + "-event-thread-", channel,
             eventHandler, countdownCloseable, logger );
     }
@@ -129,8 +161,8 @@ final class SurefireForkChannel extends ForkChannel
     @Override
     public void close() throws IOException
     {
-        //noinspection EmptyTryBlock
-        try ( Channel c1 = channel; Channel c2 = server )
+        //noinspection unused,EmptyTryBlock,EmptyTryBlock
+        try ( Closeable c1 = worker; Closeable c2 = server )
         {
             // only close all channels
         }

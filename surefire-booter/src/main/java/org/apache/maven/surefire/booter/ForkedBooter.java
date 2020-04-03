@@ -23,8 +23,6 @@ import org.apache.maven.plugin.surefire.log.api.ConsoleLogger;
 import org.apache.maven.surefire.booter.spi.LegacyMasterProcessChannelProcessorFactory;
 import org.apache.maven.surefire.booter.spi.SurefireMasterProcessChannelProcessorFactory;
 import org.apache.maven.surefire.providerapi.CommandListener;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelDecoder;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
 import org.apache.maven.surefire.providerapi.ProviderParameters;
 import org.apache.maven.surefire.providerapi.SurefireProvider;
 import org.apache.maven.surefire.report.LegacyPojoStackTraceWriter;
@@ -166,6 +164,15 @@ public final class ForkedBooter
         }
         finally
         {
+            //noinspection ResultOfMethodCallIgnored
+            Thread.interrupted();
+
+            if ( eventChannel.checkError() )
+            {
+                DumpErrorSingleton.getSingleton()
+                    .dumpText( "The channel (std/out or TCP/IP) failed to send a stream from this subprocess." );
+            }
+
             acknowledgedExit();
         }
     }
@@ -382,9 +389,6 @@ public final class ForkedBooter
 
     private void acknowledgedExit()
     {
-        //noinspection ResultOfMethodCallIgnored
-        Thread.interrupted();
-
         commandReader.addByeAckListener( new CommandListener()
                                           {
                                               @Override
@@ -397,7 +401,11 @@ public final class ForkedBooter
         eventChannel.bye();
         launchLastDitchDaemonShutdownThread( 0 );
         long timeoutMillis = max( systemExitTimeoutInSeconds * ONE_SECOND_IN_MILLIS, ONE_SECOND_IN_MILLIS );
-        acquireOnePermit( exitBarrier, timeoutMillis );
+        boolean timeoutElapsed = !acquireOnePermit( exitBarrier, timeoutMillis );
+        if ( timeoutElapsed )
+        {
+            eventChannel.sendExitError( null, false );
+        }
         cancelPingScheduler();
         commandReader.stop();
         closeForkChannel();
@@ -544,15 +552,16 @@ public final class ForkedBooter
         return pluginProcessChecker != null && pluginProcessChecker.canUse();
     }
 
-    private static void acquireOnePermit( Semaphore barrier, long timeoutMillis )
+    private static boolean acquireOnePermit( Semaphore barrier, long timeoutMillis )
     {
         try
         {
-            barrier.tryAcquire( timeoutMillis, MILLISECONDS );
+            return barrier.tryAcquire( timeoutMillis, MILLISECONDS );
         }
         catch ( InterruptedException e )
         {
             // cancel schedulers, stop the command reader and exit 0
+            return true;
         }
     }
 

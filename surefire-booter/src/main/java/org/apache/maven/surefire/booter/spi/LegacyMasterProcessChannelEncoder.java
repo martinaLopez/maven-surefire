@@ -22,21 +22,22 @@ package org.apache.maven.surefire.booter.spi;
 import org.apache.maven.plugin.surefire.log.api.ConsoleLoggerUtils;
 import org.apache.maven.surefire.booter.DumpErrorSingleton;
 import org.apache.maven.surefire.booter.ForkedProcessEventType;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
+import org.apache.maven.surefire.booter.MasterProcessChannelEncoder;
 import org.apache.maven.surefire.report.ReportEntry;
 import org.apache.maven.surefire.report.RunMode;
 import org.apache.maven.surefire.report.SafeThrowable;
 import org.apache.maven.surefire.report.StackTraceWriter;
 import org.apache.maven.surefire.shared.codec.binary.Base64;
+import org.apache.maven.surefire.util.internal.WritableBufferedByteChannel;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -75,21 +76,20 @@ import static org.apache.maven.surefire.report.RunMode.RERUN_TEST_AFTER_FAILURE;
  */
 public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEncoder
 {
-    static final String MAGIC_NUMBER_DELIMITED = ':' + MAGIC_NUMBER + ':';
     private static final Base64 BASE64 = new Base64();
     private static final Charset STREAM_ENCODING = US_ASCII;
     private static final Charset STRING_ENCODING = UTF_8;
 
-    protected final WritableByteChannel out;
+    private final WritableBufferedByteChannel out;
     private final RunMode runMode;
-    private volatile boolean trouble;
+    private final AtomicBoolean trouble = new AtomicBoolean();
 
-    public LegacyMasterProcessChannelEncoder( @Nonnull WritableByteChannel out )
+    public LegacyMasterProcessChannelEncoder( @Nonnull WritableBufferedByteChannel out )
     {
         this( out, NORMAL_RUN );
     }
 
-    protected LegacyMasterProcessChannelEncoder( @Nonnull WritableByteChannel out, @Nonnull RunMode runMode )
+    protected LegacyMasterProcessChannelEncoder( @Nonnull WritableBufferedByteChannel out, @Nonnull RunMode runMode )
     {
         this.out = requireNonNull( out );
         this.runMode = requireNonNull( runMode );
@@ -110,7 +110,7 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
     @Override
     public boolean checkError()
     {
-        return trouble;
+        return trouble.get();
     }
 
     @Override
@@ -121,56 +121,56 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
             String key = entry.getKey();
             String value = entry.getValue();
             StringBuilder event = encode( BOOTERCODE_SYSPROPS, runMode, key, value );
-            encodeAndPrintEvent( event );
+            encodeAndPrintEvent( event, false );
         }
     }
 
     @Override
     public void testSetStarting( ReportEntry reportEntry, boolean trimStackTraces )
     {
-        encode( BOOTERCODE_TESTSET_STARTING, runMode, reportEntry, trimStackTraces );
+        encode( BOOTERCODE_TESTSET_STARTING, runMode, reportEntry, trimStackTraces, true );
     }
 
     @Override
     public void testSetCompleted( ReportEntry reportEntry, boolean trimStackTraces )
     {
-        encode( BOOTERCODE_TESTSET_COMPLETED, runMode, reportEntry, trimStackTraces );
+        encode( BOOTERCODE_TESTSET_COMPLETED, runMode, reportEntry, trimStackTraces, true );
     }
 
     @Override
     public void testStarting( ReportEntry reportEntry, boolean trimStackTraces )
     {
-        encode( BOOTERCODE_TEST_STARTING, runMode, reportEntry, trimStackTraces );
+        encode( BOOTERCODE_TEST_STARTING, runMode, reportEntry, trimStackTraces, true );
     }
 
     @Override
     public void testSucceeded( ReportEntry reportEntry, boolean trimStackTraces )
     {
-        encode( BOOTERCODE_TEST_SUCCEEDED, runMode, reportEntry, trimStackTraces );
+        encode( BOOTERCODE_TEST_SUCCEEDED, runMode, reportEntry, trimStackTraces, true );
     }
 
     @Override
     public void testFailed( ReportEntry reportEntry, boolean trimStackTraces )
     {
-        encode( BOOTERCODE_TEST_FAILED, runMode, reportEntry, trimStackTraces );
+        encode( BOOTERCODE_TEST_FAILED, runMode, reportEntry, trimStackTraces, true );
     }
 
     @Override
     public void testSkipped( ReportEntry reportEntry, boolean trimStackTraces )
     {
-        encode( BOOTERCODE_TEST_SKIPPED, runMode, reportEntry, trimStackTraces );
+        encode( BOOTERCODE_TEST_SKIPPED, runMode, reportEntry, trimStackTraces, true );
     }
 
     @Override
     public void testError( ReportEntry reportEntry, boolean trimStackTraces )
     {
-        encode( BOOTERCODE_TEST_ERROR, runMode, reportEntry, trimStackTraces );
+        encode( BOOTERCODE_TEST_ERROR, runMode, reportEntry, trimStackTraces, true );
     }
 
     @Override
     public void testAssumptionFailure( ReportEntry reportEntry, boolean trimStackTraces )
     {
-        encode( BOOTERCODE_TEST_ASSUMPTIONFAILURE, runMode, reportEntry, trimStackTraces );
+        encode( BOOTERCODE_TEST_ASSUMPTIONFAILURE, runMode, reportEntry, trimStackTraces, true );
     }
 
     @Override
@@ -191,14 +191,14 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
     {
         String base64Message = toBase64( message );
         StringBuilder event = encodeMessage( eventType, runMode.geRunName(), base64Message );
-        encodeAndPrintEvent( event );
+        encodeAndPrintEvent( event, false );
     }
 
     @Override
     public void consoleInfoLog( String msg )
     {
         StringBuilder event = print( BOOTERCODE_CONSOLE_INFO.getOpcode(), msg );
-        encodeAndPrintEvent( event );
+        encodeAndPrintEvent( event, true );
     }
 
     @Override
@@ -206,7 +206,7 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
     {
         StringBuilder encoded = encodeHeader( BOOTERCODE_CONSOLE_ERROR.getOpcode(), null );
         encode( encoded, msg, null, null );
-        encodeAndPrintEvent( encoded );
+        encodeAndPrintEvent( encoded, true );
     }
 
     @Override
@@ -220,74 +220,75 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
     {
         StringBuilder encoded = encodeHeader( BOOTERCODE_CONSOLE_ERROR.getOpcode(), null );
         encode( encoded, msg, null, ConsoleLoggerUtils.toString( t ) );
-        encodeAndPrintEvent( encoded );
+        encodeAndPrintEvent( encoded, true );
     }
 
     @Override
     public void consoleErrorLog( StackTraceWriter stackTraceWriter, boolean trimStackTraces )
     {
-        error( stackTraceWriter, trimStackTraces, BOOTERCODE_CONSOLE_ERROR );
+        error( stackTraceWriter, trimStackTraces, BOOTERCODE_CONSOLE_ERROR, true );
     }
 
     @Override
     public void consoleDebugLog( String msg )
     {
         StringBuilder event = print( BOOTERCODE_CONSOLE_DEBUG.getOpcode(), msg );
-        encodeAndPrintEvent( event );
+        encodeAndPrintEvent( event, true );
     }
 
     @Override
     public void consoleWarningLog( String msg )
     {
         StringBuilder event = print( BOOTERCODE_CONSOLE_WARNING.getOpcode(), msg );
-        encodeAndPrintEvent( event );
+        encodeAndPrintEvent( event, true );
     }
 
     @Override
     public void bye()
     {
-        encodeOpcode( BOOTERCODE_BYE );
+        encodeOpcode( BOOTERCODE_BYE, true );
     }
 
     @Override
     public void stopOnNextTest()
     {
-        encodeOpcode( BOOTERCODE_STOP_ON_NEXT_TEST );
+        encodeOpcode( BOOTERCODE_STOP_ON_NEXT_TEST, true );
     }
 
     @Override
     public void acquireNextTest()
     {
-        encodeOpcode( BOOTERCODE_NEXT_TEST );
+        encodeOpcode( BOOTERCODE_NEXT_TEST, true );
     }
 
     @Override
-    public void sendExitEvent( StackTraceWriter stackTraceWriter, boolean trimStackTraces )
+    public void sendExitError( StackTraceWriter stackTraceWriter, boolean trimStackTraces )
     {
-        error( stackTraceWriter, trimStackTraces, BOOTERCODE_JVM_EXIT_ERROR );
+        error( stackTraceWriter, trimStackTraces, BOOTERCODE_JVM_EXIT_ERROR, true );
     }
 
-    private void error( StackTraceWriter stackTraceWriter, boolean trimStackTraces, ForkedProcessEventType event )
+    private void error( StackTraceWriter stackTraceWriter, boolean trimStackTraces, ForkedProcessEventType event,
+                        @SuppressWarnings( "SameParameterValue" ) boolean sendImmediately )
     {
         StringBuilder encoded = encodeHeader( event.getOpcode(), null );
         encode( encoded, stackTraceWriter, trimStackTraces );
-        encodeAndPrintEvent( encoded );
+        encodeAndPrintEvent( encoded, sendImmediately );
     }
 
     private void encode( ForkedProcessEventType operation, RunMode runMode, ReportEntry reportEntry,
-                         boolean trimStackTraces )
+                         boolean trimStackTraces, @SuppressWarnings( "SameParameterValue" ) boolean sendImmediately )
     {
         StringBuilder event = encode( operation.getOpcode(), runMode.geRunName(), reportEntry, trimStackTraces );
-        encodeAndPrintEvent( event );
+        encodeAndPrintEvent( event, sendImmediately );
     }
 
-    private void encodeOpcode( ForkedProcessEventType operation )
+    private void encodeOpcode( ForkedProcessEventType operation, boolean sendImmediately )
     {
         StringBuilder event = encodeOpcode( operation.getOpcode(), null );
-        encodeAndPrintEvent( event );
+        encodeAndPrintEvent( event, sendImmediately );
     }
 
-    private void encodeAndPrintEvent( StringBuilder event )
+    private void encodeAndPrintEvent( StringBuilder event, boolean sendImmediately )
     {
         try
         {
@@ -298,7 +299,16 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
                 .toString()
                 .getBytes( STREAM_ENCODING );
 
-            out.write( ByteBuffer.wrap( array ) );
+            ByteBuffer bb = ByteBuffer.wrap( array );
+
+            if ( sendImmediately )
+            {
+                out.write( bb );
+            }
+            else
+            {
+                out.writeBuffered( bb );
+            }
         }
         catch ( ClosedChannelException e )
         {
@@ -307,9 +317,11 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
         }
         catch ( IOException e )
         {
-            DumpErrorSingleton.getSingleton()
-                .dumpException( e );
-            trouble = true;
+            if ( trouble.compareAndSet( false, true ) )
+            {
+                DumpErrorSingleton.getSingleton()
+                    .dumpException( e );
+            }
         }
     }
 
@@ -415,7 +427,7 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
     }
 
     /**
-     * Used in {@link #bye()}, {@link #stopOnNextTest()} and {@link #encodeOpcode(ForkedProcessEventType)}
+     * Used in {@link #bye()}, {@link #stopOnNextTest()} and {@link #encodeOpcode(ForkedProcessEventType, boolean)}
      * and private methods extending the buffer.
      *
      * @param operation opcode
@@ -425,7 +437,9 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
     static StringBuilder encodeOpcode( String operation, String runMode )
     {
         StringBuilder s = new StringBuilder( 128 )
-            .append( MAGIC_NUMBER_DELIMITED )
+            .append( ':' )
+            .append( MAGIC_NUMBER )
+            .append( ':' )
             .append( operation )
             .append( ':' );
 

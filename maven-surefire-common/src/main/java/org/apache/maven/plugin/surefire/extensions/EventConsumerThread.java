@@ -19,7 +19,6 @@ package org.apache.maven.plugin.surefire.extensions;
  * under the License.
  */
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.maven.plugin.surefire.booterclient.output.DeserializedStacktraceWriter;
 import org.apache.maven.plugin.surefire.log.api.ConsoleLogger;
 import org.apache.maven.surefire.booter.ForkedProcessEventType;
@@ -51,6 +50,7 @@ import org.apache.maven.surefire.extensions.util.CountdownCloseable;
 import org.apache.maven.surefire.report.RunMode;
 import org.apache.maven.surefire.report.StackTraceWriter;
 import org.apache.maven.surefire.report.TestSetReportEntry;
+import org.apache.maven.surefire.shared.codec.binary.Base64;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -203,7 +203,7 @@ public class EventConsumerThread extends CloseableDaemonThread
 
     private boolean read( ByteBuffer buffer ) throws IOException
     {
-        if ( buffer.hasRemaining() )
+        if ( buffer.hasRemaining() && buffer.position() > 0 )
         {
             return true;
         }

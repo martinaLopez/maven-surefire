@@ -147,7 +147,5 @@ public interface ProviderParameters
 
     Integer getSystemExitTimeout();
 
-    MasterProcessChannelEncoder getForkedChannelEncoder();
-
     CommandChainReader getCommandReader();
 }

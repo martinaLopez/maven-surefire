@@ -38,6 +38,7 @@ import org.apache.maven.surefire.report.RunListener;
 import org.apache.maven.surefire.report.SimpleReportEntry;
 import org.apache.maven.surefire.report.StackTraceWriter;
 import org.apache.maven.surefire.report.TestSetReportEntry;
+import org.apache.maven.surefire.util.internal.WritableBufferedByteChannel;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
@@ -53,7 +54,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static java.nio.channels.Channels.newChannel;
+import static org.apache.maven.surefire.util.internal.Channels.newBufferedChannel;
+import static org.apache.maven.surefire.util.internal.Channels.newChannel;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -243,10 +245,11 @@ public class ForkingRunListenerTest
         ReportEntry expected = createDefaultReportEntry();
         SimpleReportEntry secondExpected = createAnotherDefaultReportEntry();
 
-        new ForkingRunListener( new LegacyMasterProcessChannelEncoder( newChannel( printStream ) ), false )
+        new ForkingRunListener( new LegacyMasterProcessChannelEncoder( newBufferedChannel( printStream ) ), false )
                 .testStarting( expected );
 
-        new ForkingRunListener( new LegacyMasterProcessChannelEncoder( newChannel( anotherPrintStream ) ), false )
+        new ForkingRunListener(
+            new LegacyMasterProcessChannelEncoder( newBufferedChannel( anotherPrintStream ) ), false )
                 .testSkipped( secondExpected );
 
         TestSetMockReporterFactory providerReporterFactory = new TestSetMockReporterFactory();
@@ -362,7 +365,8 @@ public class ForkingRunListenerTest
 
     private RunListener createForkingRunListener()
     {
-        return new ForkingRunListener( new LegacyMasterProcessChannelEncoder( newChannel( printStream ) ), false );
+        WritableBufferedByteChannel channel = (WritableBufferedByteChannel) newChannel( printStream );
+        return new ForkingRunListener( new LegacyMasterProcessChannelEncoder( channel ), false );
     }
 
     private class StandardTestRun

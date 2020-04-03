@@ -22,7 +22,6 @@ package org.apache.maven.surefire.booter;
 import java.util.Collections;
 import java.util.Iterator;
 
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
 import org.apache.maven.surefire.util.CloseableIterator;
 import org.apache.maven.surefire.util.TestsToRun;
 

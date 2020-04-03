@@ -19,15 +19,14 @@ package org.apache.maven.surefire.booter.spi;
  * under the License.
  */
 
-import org.apache.maven.surefire.providerapi.MasterProcessChannelDecoder;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
+import org.apache.maven.surefire.booter.MasterProcessChannelDecoder;
+import org.apache.maven.surefire.booter.MasterProcessChannelEncoder;
 import org.apache.maven.surefire.spi.MasterProcessChannelProcessorFactory;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 
-import static org.apache.maven.surefire.util.internal.Channels.newChannel;
-import static org.apache.maven.surefire.util.internal.Channels.newFlushableChannel;
+import static org.apache.maven.surefire.util.internal.Channels.newBufferedChannel;
 
 /**
  * Producer of encoder and decoder for process pipes.
@@ -57,13 +56,13 @@ public class LegacyMasterProcessChannelProcessorFactory
     @Override
     public MasterProcessChannelDecoder createDecoder()
     {
-        return new LegacyMasterProcessChannelDecoder( newChannel( System.in ) );
+        return new LegacyMasterProcessChannelDecoder( newBufferedChannel( System.in ) );
     }
 
     @Override
     public MasterProcessChannelEncoder createEncoder()
     {
-        return new LegacyMasterProcessChannelEncoder( newFlushableChannel( System.out ) );
+        return new LegacyMasterProcessChannelEncoder( newBufferedChannel( System.out ) );
     }
 
     @Override

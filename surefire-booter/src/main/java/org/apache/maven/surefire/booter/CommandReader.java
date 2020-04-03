@@ -22,8 +22,6 @@ package org.apache.maven.surefire.booter;
 import org.apache.maven.plugin.surefire.log.api.ConsoleLogger;
 import org.apache.maven.surefire.providerapi.CommandChainReader;
 import org.apache.maven.surefire.providerapi.CommandListener;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelDecoder;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
 import org.apache.maven.surefire.testset.TestSetFailedException;
 
 import java.io.EOFException;

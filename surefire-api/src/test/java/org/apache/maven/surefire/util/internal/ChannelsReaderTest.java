@@ -38,7 +38,7 @@ import static java.nio.file.Files.write;
 import static org.fest.assertions.Assertions.assertThat;
 
 /**
- * The tests for {@link Channels#newChannel(InputStream)}.
+ * The tests for {@link Channels#newChannel(InputStream)} and {@link Channels#newBufferedChannel(InputStream)}.
  */
 public class ChannelsReaderTest
 {
@@ -96,6 +96,62 @@ public class ChannelsReaderTest
 
         assertThat( bb.array() )
             .isEqualTo( new byte[] {1, 2, 3} );
+
+        assertThat( channel.isOpen() )
+            .isTrue();
+
+        channel.close();
+
+        assertThat( channel.isOpen() )
+            .isFalse();
+    }
+
+    @Test
+    public void bufferedChannel() throws Exception
+    {
+        ByteArrayInputStream is = new ByteArrayInputStream( new byte[] {1, 2, 3} );
+        ReadableByteChannel channel = Channels.newBufferedChannel( is );
+        ByteBuffer bb = ByteBuffer.allocate( 4 );
+
+        int countWritten = channel.read( bb );
+
+        assertThat( countWritten )
+            .isEqualTo( 3 );
+
+        assertThat( bb.arrayOffset() )
+            .isEqualTo( 0 );
+
+        assertThat( bb.position() )
+            .isEqualTo( 3 );
+
+        assertThat( bb.remaining() )
+            .isEqualTo( 1 );
+
+        assertThat( bb.limit() )
+            .isEqualTo( 4 );
+
+        assertThat( bb.capacity() )
+            .isEqualTo( 4 );
+
+        bb.flip();
+
+        assertThat( bb.arrayOffset() )
+            .isEqualTo( 0 );
+
+        assertThat( bb.position() )
+            .isEqualTo( 0 );
+
+        assertThat( bb.remaining() )
+            .isEqualTo( 3 );
+
+        assertThat( bb.limit() )
+            .isEqualTo( 3 );
+
+        assertThat( bb.capacity() )
+            .isEqualTo( 4 );
+
+        assertThat( bb.array() )
+            .isEqualTo( new byte[] {1, 2, 3, 0} );
 
         assertThat( channel.isOpen() )
             .isTrue();

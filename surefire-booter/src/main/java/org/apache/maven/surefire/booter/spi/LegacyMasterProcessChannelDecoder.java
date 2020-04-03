@@ -22,7 +22,7 @@ package org.apache.maven.surefire.booter.spi;
 import org.apache.maven.surefire.booter.Command;
 import org.apache.maven.surefire.booter.DumpErrorSingleton;
 import org.apache.maven.surefire.booter.MasterProcessCommand;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelDecoder;
+import org.apache.maven.surefire.booter.MasterProcessChannelDecoder;
 import org.apache.maven.surefire.util.internal.ImmutableMap;
 
 import javax.annotation.Nonnull;

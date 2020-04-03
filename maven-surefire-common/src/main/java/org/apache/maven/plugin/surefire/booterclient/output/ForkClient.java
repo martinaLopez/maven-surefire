@@ -24,7 +24,7 @@ import org.apache.maven.plugin.surefire.log.api.ConsoleLogger;
 import org.apache.maven.plugin.surefire.report.DefaultReporterFactory;
 import org.apache.maven.surefire.eventapi.Event;
 import org.apache.maven.surefire.extensions.EventHandler;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
+import org.apache.maven.surefire.booter.MasterProcessChannelEncoder;
 import org.apache.maven.surefire.report.ConsoleOutputReceiver;
 import org.apache.maven.surefire.report.ReportEntry;
 import org.apache.maven.surefire.report.RunListener;
@@ -111,6 +111,7 @@ public class ForkClient
         notifier.setStopOnNextTestListener( new StopOnNextTestListener() );
         notifier.setConsoleDebugListener( new DebugListener() );
         notifier.setConsoleWarningListener( new WarningListener() );
+        notifier.setExitErrorEventListener( new ExitErrorEventListener() );
     }
 
     private final class TestSetStartingListener
@@ -300,6 +301,16 @@ public class ForkClient
         {
             getOrCreateConsoleLogger()
                     .warning( msg );
+        }
+    }
+
+    private final class ExitErrorEventListener implements ForkedProcessExitErrorListener
+    {
+        @Override
+        public void handle( StackTraceWriter stackTrace )
+        {
+            getOrCreateConsoleLogger()
+                .error( "System Exit has timed out in the forked process " + forkNumber );
         }
     }
 

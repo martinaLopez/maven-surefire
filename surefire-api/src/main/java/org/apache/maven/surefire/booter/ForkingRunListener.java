@@ -20,7 +20,6 @@ package org.apache.maven.surefire.booter;
  */
 
 import org.apache.maven.plugin.surefire.log.api.ConsoleLogger;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
 import org.apache.maven.surefire.report.ConsoleOutputReceiver;
 import org.apache.maven.surefire.report.ConsoleStream;
 import org.apache.maven.surefire.report.ReportEntry;

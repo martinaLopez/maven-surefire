@@ -39,6 +39,7 @@ import org.apache.maven.surefire.report.RunMode;
 import org.apache.maven.surefire.report.SafeThrowable;
 import org.apache.maven.surefire.report.StackTraceWriter;
 import org.apache.maven.surefire.util.internal.ObjectUtils;
+import org.apache.maven.surefire.util.internal.WritableBufferedByteChannel;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -68,10 +69,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static java.nio.channels.Channels.newChannel;
+import static org.apache.maven.surefire.util.internal.Channels.newBufferedChannel;
+import static org.apache.maven.surefire.util.internal.Channels.newChannel;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.copyOfRange;
-import static org.apache.commons.codec.binary.Base64.encodeBase64String;
+import static org.apache.maven.surefire.shared.codec.binary.Base64.encodeBase64String;
 import static org.apache.maven.surefire.report.RunMode.NORMAL_RUN;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -114,9 +116,11 @@ public class ForkedProcessEventNotifierTest
         public void shouldHaveSystemProperty() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            WritableBufferedByteChannel wChannel = newBufferedChannel( out );
+            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( wChannel );
             Map<String, String> props = ObjectUtils.systemProps();
             encoder.sendSystemProperties( props );
+            wChannel.close();
 
             ForkedProcessEventNotifier notifier = new ForkedProcessEventNotifier();
             PropertyEventAssertionListener listener = new PropertyEventAssertionListener();
@@ -307,7 +311,8 @@ public class ForkedProcessEventNotifierTest
         public void shouldSendByeEvent() throws Exception
         {
             Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
             encoder.bye();
             String read = new String( out.toByteArray(), UTF_8 );
 
@@ -343,7 +348,8 @@ public class ForkedProcessEventNotifierTest
         public void shouldSendStopOnNextTestEvent() throws Exception
         {
             Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
             encoder.stopOnNextTest();
             String read = new String( out.toByteArray(), UTF_8 );
 
@@ -401,7 +407,8 @@ public class ForkedProcessEventNotifierTest
             when( reportEntry.getStackTraceWriter() ).thenReturn( stackTraceWriter );
 
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
             encoder.testFailed( reportEntry, true );
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
@@ -427,7 +434,8 @@ public class ForkedProcessEventNotifierTest
         public void shouldSendNextTestEvent() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
             encoder.acquireNextTest();
             String read = new String( out.toByteArray(), UTF_8 );
 
@@ -457,7 +465,8 @@ public class ForkedProcessEventNotifierTest
         public void testConsole() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
             encoder.consoleInfoLog( "msg" );
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
@@ -483,7 +492,8 @@ public class ForkedProcessEventNotifierTest
         public void testError() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
             encoder.consoleErrorLog( "msg" );
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
@@ -509,7 +519,8 @@ public class ForkedProcessEventNotifierTest
         public void testErrorWithException() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
             Throwable throwable = new Throwable( "msg" );
             encoder.consoleErrorLog( throwable );
 
@@ -538,7 +549,8 @@ public class ForkedProcessEventNotifierTest
         {
             final Stream out = Stream.newStream();
 
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
             StackTraceWriter stackTraceWriter = new DeserializedStacktraceWriter( "1", "2", "3" );
             encoder.consoleErrorLog( stackTraceWriter, false );
 
@@ -566,7 +578,8 @@ public class ForkedProcessEventNotifierTest
         {
             final Stream out = Stream.newStream();
 
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
             encoder.consoleDebugLog( "msg" );
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
@@ -596,7 +609,8 @@ public class ForkedProcessEventNotifierTest
         {
             final Stream out = Stream.newStream();
 
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
             encoder.consoleWarningLog( "msg" );
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
@@ -622,8 +636,10 @@ public class ForkedProcessEventNotifierTest
         public void testStdOutStream() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            WritableBufferedByteChannel wChannel = newBufferedChannel( out );
+            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( wChannel );
             encoder.stdOut( "msg", false );
+            wChannel.close();
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
 
@@ -649,8 +665,10 @@ public class ForkedProcessEventNotifierTest
         public void testStdOutStreamPrint() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            WritableBufferedByteChannel wChannel = newBufferedChannel( out );
+            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( wChannel );
             encoder.stdOut( "", false );
+            wChannel.close();
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
 
@@ -676,8 +694,10 @@ public class ForkedProcessEventNotifierTest
         public void testStdOutStreamPrintWithNull() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            WritableBufferedByteChannel wChannel = newBufferedChannel( out );
+            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( wChannel );
             encoder.stdOut( null, false );
+            wChannel.close();
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
 
@@ -703,8 +723,10 @@ public class ForkedProcessEventNotifierTest
         public void testStdOutStreamPrintln() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            WritableBufferedByteChannel wChannel = newBufferedChannel( out );
+            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( wChannel );
             encoder.stdOut( "", true );
+            wChannel.close();
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
 
@@ -730,8 +752,10 @@ public class ForkedProcessEventNotifierTest
         public void testStdOutStreamPrintlnWithNull() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            WritableBufferedByteChannel wChannel = newBufferedChannel( out );
+            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( wChannel );
             encoder.stdOut( null, true );
+            wChannel.close();
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
 
@@ -757,8 +781,10 @@ public class ForkedProcessEventNotifierTest
         public void testStdErrStream() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            WritableBufferedByteChannel wChannel = newBufferedChannel( out );
+            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( wChannel );
             encoder.stdErr( "msg", false );
+            wChannel.close();
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
 
@@ -784,8 +810,10 @@ public class ForkedProcessEventNotifierTest
         public void shouldCountSameNumberOfSystemProperties() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            WritableBufferedByteChannel wChannel = newBufferedChannel( out );
+            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( wChannel );
             encoder.sendSystemProperties( ObjectUtils.systemProps() );
+            wChannel.close();
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
 
@@ -839,14 +867,15 @@ public class ForkedProcessEventNotifierTest
         public void shouldHandleExit() throws Exception
         {
             final Stream out = Stream.newStream();
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
 
             StackTraceWriter stackTraceWriter = mock( StackTraceWriter.class );
             when( stackTraceWriter.getThrowable() ).thenReturn( new SafeThrowable( "1" ) );
             when( stackTraceWriter.smartTrimmedStackTrace() ).thenReturn( "2" );
             when( stackTraceWriter.writeTraceToString() ).thenReturn( "3" );
             when( stackTraceWriter.writeTrimmedTraceToString() ).thenReturn( "4" );
-            encoder.sendExitEvent( stackTraceWriter, false );
+            encoder.sendExitError( stackTraceWriter, false );
 
             ReadableByteChannel channel = newChannel( new ByteArrayInputStream( out.toByteArray() ) );
 
@@ -950,7 +979,8 @@ public class ForkedProcessEventNotifierTest
 
             final Stream out = Stream.newStream();
 
-            LegacyMasterProcessChannelEncoder encoder = new LegacyMasterProcessChannelEncoder( newChannel( out ) );
+            LegacyMasterProcessChannelEncoder encoder =
+                new LegacyMasterProcessChannelEncoder( newBufferedChannel( out ) );
 
             LegacyMasterProcessChannelEncoder.class.getMethod( operation[0], ReportEntry.class, boolean.class )
                     .invoke( encoder, reportEntry, trim );

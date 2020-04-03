@@ -20,7 +20,6 @@ package org.apache.maven.surefire.booter;
  */
 
 import junit.framework.TestCase;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
 import org.mockito.ArgumentCaptor;
 
 import static org.fest.assertions.Assertions.assertThat;

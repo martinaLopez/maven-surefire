@@ -38,7 +38,7 @@ import static java.nio.file.Files.readAllBytes;
 import static org.fest.assertions.Assertions.assertThat;
 
 /**
- * The tests for {@link Channels#newChannel(OutputStream)} and {@link Channels#newFlushableChannel(OutputStream)}.
+ * The tests for {@link Channels#newChannel(OutputStream)} and {@link Channels#newBufferedChannel(OutputStream)}.
  */
 public class ChannelsWriterTest
 {
@@ -63,7 +63,7 @@ public class ChannelsWriterTest
                 super.flush();
             }
         };
-        WritableByteChannel channel = Channels.newFlushableChannel( out );
+        WritableByteChannel channel = Channels.newBufferedChannel( out );
         ByteBuffer bb = ByteBuffer.wrap( new byte[] {1, 2, 3} );
         int countWritten = channel.write( bb );
         assertThat( countWritten )
@@ -113,6 +113,45 @@ public class ChannelsWriterTest
 
         assertThat( bb.capacity() )
             .isEqualTo( 4 );
+
+        assertThat( channel.isOpen() )
+            .isTrue();
+    }
+
+    @Test
+    public void bufferedChannel() throws Exception
+    {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        WritableBufferedByteChannel channel = Channels.newBufferedChannel( out );
+        ByteBuffer bb = ByteBuffer.allocate( 5 );
+        bb.put( (byte) 1 );
+        bb.put( (byte) 2 );
+        bb.put( (byte) 3 );
+
+        channel.writeBuffered( bb );
+
+        assertThat( out.toByteArray() )
+            .isEmpty();
+
+        channel.write( ByteBuffer.allocate( 0 ) );
+
+        assertThat( out.toByteArray() )
+            .isEmpty();
+
+        channel.write( ByteBuffer.wrap( new byte[] {4} ) );
+
+        assertThat( out.toByteArray() )
+            .hasSize( 4 )
+            .isEqualTo( new byte[] {1, 2, 3, 4} );
+
+        assertThat( bb.position() )
+            .isEqualTo( 3 );
+
+        assertThat( bb.limit() )
+            .isEqualTo( 3 );
+
+        assertThat( bb.capacity() )
+            .isEqualTo( 5 );
 
         assertThat( channel.isOpen() )
             .isTrue();

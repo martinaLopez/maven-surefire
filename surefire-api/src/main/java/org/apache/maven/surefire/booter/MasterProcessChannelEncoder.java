@@ -1,4 +1,4 @@
-package org.apache.maven.surefire.providerapi;
+package org.apache.maven.surefire.booter;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -80,5 +80,5 @@ public interface MasterProcessChannelEncoder
 
     void acquireNextTest();
 
-    void sendExitEvent( StackTraceWriter stackTraceWriter, boolean trimStackTraces );
+    void sendExitError( StackTraceWriter stackTraceWriter, boolean trimStackTraces );
 }

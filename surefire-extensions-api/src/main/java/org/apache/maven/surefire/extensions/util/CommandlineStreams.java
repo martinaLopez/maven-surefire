@@ -28,8 +28,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-import static org.apache.maven.surefire.util.internal.Channels.newChannel;
-import static org.apache.maven.surefire.util.internal.Channels.newFlushableChannel;
+import static org.apache.maven.surefire.util.internal.Channels.newBufferedChannel;
 
 /**
  *
@@ -44,12 +43,12 @@ public final class CommandlineStreams implements Closeable
     public CommandlineStreams( @Nonnull Process process )
     {
         InputStream stdOutStream = process.getInputStream();
-        stdOutChannel = newChannel( stdOutStream );
+        stdOutChannel = newBufferedChannel( stdOutStream );
 
         InputStream stdErrStream = process.getErrorStream();
-        stdErrChannel = newChannel( stdErrStream );
+        stdErrChannel = newBufferedChannel( stdErrStream );
 
-        stdInChannel = newFlushableChannel( process.getOutputStream() );
+        stdInChannel = newBufferedChannel( process.getOutputStream() );
     }
 
     public ReadableByteChannel getStdOutChannel()

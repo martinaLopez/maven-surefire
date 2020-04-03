@@ -1,4 +1,4 @@
-package org.apache.maven.surefire.providerapi;
+package org.apache.maven.surefire.booter;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -18,8 +18,6 @@ package org.apache.maven.surefire.providerapi;
  * specific language governing permissions and limitations
  * under the License.
  */
-
-import org.apache.maven.surefire.booter.Command;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;

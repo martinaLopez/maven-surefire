@@ -21,7 +21,6 @@ package org.apache.maven.surefire.booter;
 
 import org.apache.maven.surefire.cli.CommandLineOption;
 import org.apache.maven.surefire.providerapi.CommandChainReader;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
 import org.apache.maven.surefire.providerapi.ProviderParameters;
 import org.apache.maven.surefire.report.ConsoleStream;
 import org.apache.maven.surefire.report.DefaultDirectConsoleReporter;
@@ -261,12 +260,6 @@ public class BaseProviderFactory
     public void setSystemExitTimeout( Integer systemExitTimeout )
     {
         this.systemExitTimeout = systemExitTimeout;
-    }
-
-    @Override
-    public MasterProcessChannelEncoder getForkedChannelEncoder()
-    {
-        return masterProcessChannelEncoder;
     }
 
     public void setForkedChannelEncoder( MasterProcessChannelEncoder masterProcessChannelEncoder )

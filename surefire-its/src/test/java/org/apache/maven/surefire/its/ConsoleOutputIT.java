@@ -19,13 +19,13 @@ package org.apache.maven.surefire.its;
  * under the License.
  */
 
-import com.googlecode.junittoolbox.ParallelParameterized;
 import org.apache.maven.surefire.its.fixture.OutputValidator;
 import org.apache.maven.surefire.its.fixture.SurefireJUnit4IntegrationTestCase;
 import org.apache.maven.surefire.its.fixture.SurefireLauncher;
 import org.apache.maven.surefire.its.fixture.TestFile;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
@@ -40,7 +40,7 @@ import static org.hamcrest.Matchers.equalTo;
  *
  * @author Kristian Rosenvold
  */
-@RunWith( ParallelParameterized.class )
+@RunWith( Parameterized.class )
 public class ConsoleOutputIT
     extends SurefireJUnit4IntegrationTestCase
 {
@@ -67,7 +67,7 @@ public class ConsoleOutputIT
     public void properNewlinesAndEncodingWithDefaultEncodings() throws Exception
     {
         OutputValidator outputValidator = unpack().forkOnce().executeTest();
-        validate( outputValidator, profileId == null, true );
+        validate( outputValidator, true );
     }
 
     @Test
@@ -77,7 +77,7 @@ public class ConsoleOutputIT
                 .forkOnce()
                 .argLine( "-Dfile.encoding=UTF-16" )
                 .executeTest();
-        validate( outputValidator, profileId == null, true );
+        validate( outputValidator, true );
     }
 
     @Test
@@ -86,7 +86,7 @@ public class ConsoleOutputIT
         OutputValidator outputValidator = unpack()
                 .forkNever()
                 .executeTest();
-        validate( outputValidator, false, false );
+        validate( outputValidator, false );
     }
 
     private SurefireLauncher unpack()
@@ -103,7 +103,7 @@ public class ConsoleOutputIT
         return launcher;
     }
 
-    private void validate( final OutputValidator outputValidator, boolean includeShutdownHook, boolean canFork )
+    private void validate( final OutputValidator outputValidator, boolean canFork )
         throws Exception
     {
         TestFile xmlReportFile = outputValidator.getSurefireReportsXmlFile( "TEST-consoleOutput.Test1.xml" );
@@ -115,13 +115,6 @@ public class ConsoleOutputIT
         outputFile.assertContainsText( "SoutAgain" );
         outputFile.assertContainsText( "SoutLine" );
         outputFile.assertContainsText( "äöüß" );
-
-        if ( includeShutdownHook )
-        {
-            //todo it should not be reported in the last test which is completed
-            //todo this text should be in null-output.txt
-            outputFile.assertContainsText( "Printline in shutdown hook" );
-        }
 
         String cls = profileId == null ? LEGACY_FORK_NODE : SUREFIRE_FORK_NODE;
 

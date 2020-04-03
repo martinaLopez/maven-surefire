@@ -29,26 +29,8 @@ import static org.junit.Assert.fail;
 
 public class Test1
 {
-    static
+    public Test1()
     {
-       System.out.println("Printline in static block");
-        Runtime.getRuntime().addShutdownHook(  new Thread( ){
-            @Override
-            public void run()
-            {
-                System.out.println( "Printline in shutdown hook" );
-            }
-        });
-    }
-
-    @Override
-    protected void finalize()
-        throws Throwable
-    {
-        System.out.println( "Printline in finalizer" );
-    }
-
-    public Test1(){
        System.out.println("In constructor");
     }
 

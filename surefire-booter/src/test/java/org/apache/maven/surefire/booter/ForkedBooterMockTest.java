@@ -23,8 +23,6 @@ import org.apache.maven.surefire.booter.spi.LegacyMasterProcessChannelDecoder;
 import org.apache.maven.surefire.booter.spi.LegacyMasterProcessChannelEncoder;
 import org.apache.maven.surefire.booter.spi.LegacyMasterProcessChannelProcessorFactory;
 import org.apache.maven.surefire.booter.spi.SurefireMasterProcessChannelProcessorFactory;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelDecoder;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
 import org.apache.maven.surefire.report.StackTraceWriter;
 import org.apache.maven.surefire.spi.MasterProcessChannelProcessorFactory;
 import org.junit.Rule;

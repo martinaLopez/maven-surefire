@@ -35,10 +35,11 @@ import java.net.Socket;
 import java.net.URI;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.fest.assertions.Assertions.assertThat;
 
 /**
@@ -71,43 +72,35 @@ public class ForkChannelTest
             assertThat( uri.getPort() )
                 .isPositive();
 
+            final TestLessInputStreamBuilder builder = new TestLessInputStreamBuilder();
+            TestLessInputStream commandReader = builder.build();
+            final CountDownLatch isCloseableCalled = new CountDownLatch( 1 );
+            Closeable closeable = new Closeable()
+            {
+                @Override
+                public void close()
+                {
+                    isCloseableCalled.countDown();
+                }
+            };
+            CountdownCloseable cc = new CountdownCloseable( closeable, 1 );
             Consumer consumer = new Consumer();
 
             Client client = new Client( uri.getPort() );
             client.start();
 
             channel.connectToClient();
-            SECONDS.sleep( 3L );
-
-            TestLessInputStreamBuilder builder = new TestLessInputStreamBuilder();
-            TestLessInputStream commandReader = builder.build();
-
             channel.bindCommandReader( commandReader, null ).start();
-
-            final AtomicBoolean isCloseableCalled = new AtomicBoolean();
-            Closeable closeable = new Closeable()
-            {
-                @Override
-                public void close()
-                {
-                    isCloseableCalled.set( true );
-                }
-            };
-            CountdownCloseable cc = new CountdownCloseable( closeable, 1 );
             channel.bindEventHandler( consumer, cc, null ).start();
 
-            SECONDS.sleep( 3L );
-
             commandReader.noop();
-
-            SECONDS.sleep( 3L );
 
             client.join( TESTCASE_TIMEOUT );
 
             assertThat( hasError.get() )
                 .isFalse();
 
-            assertThat( isCloseableCalled.get() )
+            assertThat( isCloseableCalled.await( TESTCASE_TIMEOUT, MILLISECONDS ) )
                 .isTrue();
 
             assertThat( consumer.lines )

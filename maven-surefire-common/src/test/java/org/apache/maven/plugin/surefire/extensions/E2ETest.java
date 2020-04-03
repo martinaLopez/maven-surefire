@@ -1,23 +1,47 @@
 package org.apache.maven.plugin.surefire.extensions;
 
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 import org.apache.maven.plugin.surefire.log.api.ConsoleLogger;
+import org.apache.maven.surefire.booter.MasterProcessChannelEncoder;
 import org.apache.maven.surefire.booter.spi.SurefireMasterProcessChannelProcessorFactory;
 import org.apache.maven.surefire.eventapi.Event;
 import org.apache.maven.surefire.extensions.EventHandler;
 import org.apache.maven.surefire.extensions.util.CountdownCloseable;
-import org.apache.maven.surefire.providerapi.MasterProcessChannelEncoder;
-import org.apache.maven.surefire.report.ConsoleOutputCapture;
 import org.apache.maven.surefire.report.ConsoleOutputReceiver;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
+import static org.fest.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+/**
+ * Simulates the End To End use case where Maven process and Surefire process communicate using the TCP/IP protocol.
+ */
+@SuppressWarnings( "checkstyle:magicnumber" )
 public class E2ETest
 {
     private static final String LONG_STRING =
@@ -27,13 +51,19 @@ public class E2ETest
     public void test() throws Exception
     {
         ConsoleLogger logger = mock( ConsoleLogger.class );
-        SurefireForkChannel server = new SurefireForkChannel(1, logger );
+        final SurefireForkChannel server = new SurefireForkChannel( 1, logger );
 
         final String connection = server.getForkNodeConnectionString();
 
-        SurefireMasterProcessChannelProcessorFactory factory = new SurefireMasterProcessChannelProcessorFactory();
+        final SurefireMasterProcessChannelProcessorFactory factory = new SurefireMasterProcessChannelProcessorFactory();
         factory.connect( connection );
         final MasterProcessChannelEncoder encoder = factory.createEncoder();
+
+        System.gc();
+
+        TimeUnit.SECONDS.sleep( 3L );
+
+        final CountDownLatch awaitHandlerFinished = new CountDownLatch( 2 );
 
         Thread t = new Thread()
         {
@@ -49,20 +79,25 @@ public class E2ETest
                     }
                 };
 
-                PrintStream out = System.out;
-                PrintStream err = System.err;
+                //PrintStream out = System.out;
+                //PrintStream err = System.err;
 
-                ConsoleOutputCapture.startCapture( target );
+                //ConsoleOutputCapture.startCapture( target );
 
                 try
                 {
-                    for ( int i = 0; i < 320_000; i++ )
+                    long t1 = System.currentTimeMillis();
+                    for ( int i = 0; i < 400_000; i++ )
                     {
-                        System.out.println( LONG_STRING );
+                        //System.out.println( LONG_STRING );
+                        encoder.stdOut( LONG_STRING, true );
                     }
-                    System.setOut( out );
-                    System.setErr( err );
-                    TimeUnit.MINUTES.sleep( 1L );
+                    long t2 = System.currentTimeMillis();
+                    long spent = t2 - t1;
+                    //System.setOut( out );
+                    //System.setErr( err );
+                    System.out.println( spent + "ms on write" );
+                    awaitHandlerFinished.countDown();
                 }
                 catch ( Exception e )
                 {
@@ -75,31 +110,39 @@ public class E2ETest
 
         server.connectToClient();
 
+        final AtomicLong readTime = new AtomicLong();
+
         EventHandler<Event> h = new EventHandler<Event>()
         {
-            volatile int i;
-            volatile long t1;
+            private final AtomicInteger counter = new AtomicInteger();
+            private volatile long t1;
 
             @Override
             public void handleEvent( @Nonnull Event event )
             {
                 try
                 {
-                    if ( i++ == 0 )
+                    if ( counter.getAndIncrement() == 0 )
                     {
                         t1 = System.currentTimeMillis();
                     }
 
-                    if ( i == 320_000 )
+                    long t2 = System.currentTimeMillis();
+                    long spent = t2 - t1;
+
+                    if ( counter.get() % 100_000 == 0 )
                     {
-                        long t2 = System.currentTimeMillis();
-                        TimeUnit.SECONDS.sleep( 1L );
-                        System.out.println( "Forked JVM spent "
-                            + ( t2 - t1 )
-                            + "ms on transferring all lines of the log." );
+                        System.out.println( spent + "ms: " + counter.get() );
+                    }
+
+                    if ( counter.get() == 320_000 )
+                    {
+                        readTime.set( spent );
+                        System.out.println( spent + "ms on read" );
+                        awaitHandlerFinished.countDown();
                     }
                 }
-                catch ( InterruptedException e )
+                catch ( Exception e )
                 {
                     e.printStackTrace();
                 }
@@ -109,18 +152,24 @@ public class E2ETest
         Closeable c = new Closeable()
         {
             @Override
-            public void close() throws IOException
+            public void close()
             {
-
             }
         };
 
         server.bindEventHandler( h, new CountdownCloseable( c, 1 ), null )
-        .start();
+            .start();
 
-        TimeUnit.SECONDS.sleep( 60L );
+        assertThat( awaitHandlerFinished.await( 30L, TimeUnit.SECONDS ) )
+            .isTrue();
 
         factory.close();
         server.close();
+
+        // 2 seconds while using the encoder/decoder
+        // 160 millis of sending pure data without encoder/decoder
+        assertThat( readTime.get() )
+            .isPositive()
+            .isLessThanOrEqualTo( 3_000L );
     }
 }

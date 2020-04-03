@@ -19,12 +19,10 @@ package org.apache.maven.surefire.util.internal;
  * under the License.
  */
 
-import java.io.Flushable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NonWritableChannelException;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * The channel used for writes which cannot be implicitly closed after the operational Thread
@@ -32,21 +30,27 @@ import java.nio.channels.WritableByteChannel;
  *
  * @since 3.0.0-M5
  */
-abstract class AbstractNoninterruptibleWritableChannel implements WritableByteChannel, Flushable
+abstract class AbstractNoninterruptibleWritableChannel implements WritableBufferedByteChannel
 {
-    private final boolean flushable;
     private volatile boolean open = true;
-
-    AbstractNoninterruptibleWritableChannel( boolean flushable )
-    {
-        this.flushable = flushable;
-    }
 
     protected abstract void writeImpl( ByteBuffer src ) throws IOException;
     protected abstract void closeImpl() throws IOException;
+    protected abstract void flushImpl() throws IOException;
 
     @Override
-    public final synchronized int write( ByteBuffer src ) throws IOException
+    public final int write( ByteBuffer src ) throws IOException
+    {
+        return write( src, true );
+    }
+
+    @Override
+    public final void writeBuffered( ByteBuffer src ) throws IOException
+    {
+        write( src, false );
+    }
+
+    int write( ByteBuffer src, boolean flush ) throws IOException
     {
         if ( !isOpen() )
         {
@@ -70,9 +74,9 @@ abstract class AbstractNoninterruptibleWritableChannel implements WritableByteCh
             countWrittenBytes = src.remaining();
             writeImpl( src );
             src.position( src.limit() );
-            if ( flushable )
+            if ( flush )
             {
-                flush();
+                flushImpl();
             }
         }
         return countWrittenBytes;

@@ -151,8 +151,9 @@ public class ForkedBooterTest
     public void testBarrier() throws Exception
     {
         Semaphore semaphore = new Semaphore( 2 );
-        invokeMethod( ForkedBooter.class, "acquireOnePermit", semaphore, 30_000L );
+        boolean acquiredOnePermit = invokeMethod( ForkedBooter.class, "acquireOnePermit", semaphore, 30_000L );
 
+        assertThat( acquiredOnePermit ).isTrue();
         assertThat( semaphore.availablePermits() ).isEqualTo( 1 );
     }
 
