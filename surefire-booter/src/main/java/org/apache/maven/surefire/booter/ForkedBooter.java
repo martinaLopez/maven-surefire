@@ -402,7 +402,7 @@ public final class ForkedBooter
         launchLastDitchDaemonShutdownThread( 0 );
         long timeoutMillis = max( systemExitTimeoutInSeconds * ONE_SECOND_IN_MILLIS, ONE_SECOND_IN_MILLIS );
         boolean timeoutElapsed = !acquireOnePermit( exitBarrier, timeoutMillis );
-        if ( timeoutElapsed )
+        if ( timeoutElapsed && !eventChannel.checkError() )
         {
             eventChannel.sendExitError( null, false );
         }
