@@ -114,6 +114,12 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
     }
 
     @Override
+    public void onJvmExit()
+    {
+        encodeAndPrintEvent( new StringBuilder( "\n" ), true );
+    }
+
+    @Override
     public void sendSystemProperties( Map<String, String> sysProps )
     {
         for ( Entry<String, String> entry : sysProps.entrySet() )

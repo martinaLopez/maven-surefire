@@ -27,6 +27,7 @@ import org.apache.maven.surefire.providerapi.ProviderParameters;
 import org.apache.maven.surefire.providerapi.SurefireProvider;
 import org.apache.maven.surefire.report.LegacyPojoStackTraceWriter;
 import org.apache.maven.surefire.report.StackTraceWriter;
+import org.apache.maven.surefire.shared.utils.cli.ShutdownHookUtils;
 import org.apache.maven.surefire.spi.MasterProcessChannelProcessorFactory;
 import org.apache.maven.surefire.testset.TestSetFailedException;
 
@@ -118,6 +119,8 @@ public final class ForkedBooter
         channelProcessorFactory.connect( channelConfig );
         eventChannel = channelProcessorFactory.createEncoder();
         MasterProcessChannelDecoder decoder = channelProcessorFactory.createDecoder();
+
+        flushEventChannelOnExit();
 
         forkingReporterFactory = createForkingReporterFactory();
         ConsoleLogger logger = (ConsoleLogger) forkingReporterFactory.createReporter();
@@ -479,6 +482,24 @@ public final class ForkedBooter
         bpf.setSystemExitTimeout( providerConfiguration.getSystemExitTimeout() );
         String providerClass = startupConfiguration.getActualClassName();
         return (SurefireProvider) instantiateOneArg( classLoader, providerClass, ProviderParameters.class, bpf );
+    }
+
+    /**
+     * Necessary for the Surefire817SystemExitIT.
+     */
+    private void flushEventChannelOnExit()
+    {
+        Runnable target = new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                eventChannel.onJvmExit();
+            }
+        };
+        Thread t = new Thread( target );
+        t.setDaemon( true );
+        ShutdownHookUtils.addShutDownHook( t );
     }
 
     private static MasterProcessChannelProcessorFactory lookupDecoderFactory( String channelConfig )

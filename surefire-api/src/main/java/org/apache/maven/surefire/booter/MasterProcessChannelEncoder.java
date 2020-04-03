@@ -38,6 +38,8 @@ public interface MasterProcessChannelEncoder
 
     boolean checkError();
 
+    void onJvmExit();
+
     void sendSystemProperties( Map<String, String> sysProps );
 
     void testSetStarting( ReportEntry reportEntry, boolean trimStackTraces );
