@@ -169,7 +169,9 @@ public class E2ETest
         // 2 seconds while using the encoder/decoder
         // 160 millis of sending pure data without encoder/decoder
         assertThat( readTime.get() )
+            .describedAs( "The performance test should assert 2s of read time. "
+                + "The limit 6s guarantees that the read time does not exceed this limit on overloaded CPU." )
             .isPositive()
-            .isLessThanOrEqualTo( 3_000L );
+            .isLessThanOrEqualTo( 6_000L );
     }
 }
