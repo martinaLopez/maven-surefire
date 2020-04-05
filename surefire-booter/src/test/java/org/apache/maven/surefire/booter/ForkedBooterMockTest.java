@@ -24,6 +24,7 @@ import org.apache.maven.surefire.booter.spi.LegacyMasterProcessChannelEncoder;
 import org.apache.maven.surefire.booter.spi.LegacyMasterProcessChannelProcessorFactory;
 import org.apache.maven.surefire.booter.spi.SurefireMasterProcessChannelProcessorFactory;
 import org.apache.maven.surefire.report.StackTraceWriter;
+import org.apache.maven.surefire.shared.utils.cli.ShutdownHookUtils;
 import org.apache.maven.surefire.spi.MasterProcessChannelProcessorFactory;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,6 +34,8 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -50,9 +53,11 @@ import static org.fest.assertions.Fail.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.powermock.api.mockito.PowerMockito.doAnswer;
 import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -67,7 +72,12 @@ import static org.powermock.reflect.Whitebox.setInternalState;
  * PowerMock tests for {@link ForkedBooter}.
  */
 @RunWith( PowerMockRunner.class )
-@PrepareForTest( { PpidChecker.class, ForkedBooter.class, LegacyMasterProcessChannelEncoder.class } )
+@PrepareForTest( {
+                     PpidChecker.class,
+                     ForkedBooter.class,
+                     LegacyMasterProcessChannelEncoder.class,
+                     ShutdownHookUtils.class
+} )
 @PowerMockIgnore( { "org.jacoco.agent.rt.*", "com.vladium.emma.rt.*" } )
 public class ForkedBooterMockTest
 {
@@ -348,5 +358,29 @@ public class ForkedBooterMockTest
                     .isInstanceOf( LegacyMasterProcessChannelEncoder.class );
             }
         }
+    }
+
+    @Test
+    public void testFlushEventChannelOnExit() throws Exception
+    {
+        mockStatic( ShutdownHookUtils.class );
+
+        final MasterProcessChannelEncoder eventChannel = mock( MasterProcessChannelEncoder.class );
+        ForkedBooter booter = new ForkedBooter();
+        setInternalState( booter, "eventChannel", eventChannel );
+
+        doAnswer( new Answer<Object>()
+        {
+            @Override
+            public Object answer( InvocationOnMock invocation )
+            {
+                Thread t = invocation.getArgument( 0 );
+                assertThat( t.isDaemon() ).isTrue();
+                t.run();
+                verify( eventChannel, times( 1 ) ).onJvmExit();
+                return null;
+            }
+        } ).when( ShutdownHookUtils.class, "addShutDownHook", any( Thread.class ) );
+        invokeMethod( booter, "flushEventChannelOnExit" );
     }
 }

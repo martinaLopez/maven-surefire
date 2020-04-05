@@ -28,7 +28,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousByteChannel;
-import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.ExecutionException;
@@ -99,7 +99,9 @@ public final class Channels
                         catch ( ExecutionException e )
                         {
                             Throwable t = e.getCause();
-                            throw new IOException( ( t == null ? e : t ).getLocalizedMessage(), t );
+                            throw t instanceof IOException
+                                ? (IOException) t
+                                : new IOException( ( t == null ? e : t ).getLocalizedMessage(), t );
                         }
                         catch ( Exception e )
                         {
@@ -124,7 +126,7 @@ public final class Channels
                     {
                         channel.close();
                     }
-                    catch ( AsynchronousCloseException e )
+                    catch ( ClosedChannelException e )
                     {
                         // closed channel anyway
                     }
@@ -157,7 +159,9 @@ public final class Channels
                 catch ( ExecutionException e )
                 {
                     Throwable t = e.getCause();
-                    throw new IOException( ( t == null ? e : t ).getLocalizedMessage(), t );
+                    throw t instanceof IOException
+                        ? (IOException) t
+                        : new IOException( ( t == null ? e : t ).getLocalizedMessage(), t );
                 }
                 catch ( Exception e )
                 {
@@ -188,7 +192,7 @@ public final class Channels
                     {
                         channel.close();
                     }
-                    catch ( AsynchronousCloseException e )
+                    catch ( ClosedChannelException e )
                     {
                         // closed channel anyway
                     }

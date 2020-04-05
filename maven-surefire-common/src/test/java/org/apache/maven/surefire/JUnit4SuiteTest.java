@@ -40,7 +40,6 @@ import org.apache.maven.plugin.surefire.booterclient.ModularClasspathForkConfigu
 import org.apache.maven.plugin.surefire.booterclient.lazytestprovider.TestLessInputStreamBuilderTest;
 import org.apache.maven.plugin.surefire.booterclient.lazytestprovider.TestProvidingInputStreamTest;
 import org.apache.maven.plugin.surefire.booterclient.output.ForkClientTest;
-import org.apache.maven.plugin.surefire.extensions.AsyncSocketTest;
 import org.apache.maven.plugin.surefire.extensions.ConsoleOutputReporterTest;
 import org.apache.maven.plugin.surefire.extensions.E2ETest;
 import org.apache.maven.plugin.surefire.extensions.ForkedProcessEventNotifierTest;
@@ -111,7 +110,6 @@ public class JUnit4SuiteTest extends TestCase
         suite.addTest( new JUnit4TestAdapter( ForkChannelTest.class ) );
         suite.addTest( new JUnit4TestAdapter( StreamFeederTest.class ) );
         suite.addTest( new JUnit4TestAdapter( E2ETest.class ) );
-        suite.addTest( new JUnit4TestAdapter( AsyncSocketTest.class ) );
         return suite;
     }
 }

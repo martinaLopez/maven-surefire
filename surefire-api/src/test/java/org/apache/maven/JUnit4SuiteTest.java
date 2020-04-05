@@ -35,6 +35,7 @@ import org.apache.maven.surefire.util.RunOrderCalculatorTest;
 import org.apache.maven.surefire.util.RunOrderTest;
 import org.apache.maven.surefire.util.ScanResultTest;
 import org.apache.maven.surefire.util.TestsToRunTest;
+import org.apache.maven.surefire.util.internal.AsyncSocketTest;
 import org.apache.maven.surefire.util.internal.ChannelsReaderTest;
 import org.apache.maven.surefire.util.internal.ChannelsWriterTest;
 import org.apache.maven.surefire.util.internal.ConcurrencyUtilsTest;
@@ -66,7 +67,8 @@ import org.junit.runners.Suite;
     ImmutableMapTest.class,
     ReflectionUtilsTest.class,
     ChannelsReaderTest.class,
-    ChannelsWriterTest.class
+    ChannelsWriterTest.class,
+    AsyncSocketTest.class
 } )
 @RunWith( Suite.class )
 public class JUnit4SuiteTest
