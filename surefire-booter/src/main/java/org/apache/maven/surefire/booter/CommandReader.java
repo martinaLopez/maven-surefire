@@ -35,21 +35,19 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static java.util.Objects.requireNonNull;
+import static java.lang.StrictMath.max;
 import static java.lang.Thread.State.NEW;
 import static java.lang.Thread.State.RUNNABLE;
 import static java.lang.Thread.State.TERMINATED;
-import static java.lang.StrictMath.max;
+import static java.util.Objects.requireNonNull;
 import static org.apache.maven.surefire.booter.Command.toShutdown;
 import static org.apache.maven.surefire.booter.MasterProcessCommand.BYE_ACK;
 import static org.apache.maven.surefire.booter.MasterProcessCommand.NOOP;
-import static org.apache.maven.surefire.booter.MasterProcessCommand.RUN_CLASS;
 import static org.apache.maven.surefire.booter.MasterProcessCommand.SHUTDOWN;
 import static org.apache.maven.surefire.booter.MasterProcessCommand.SKIP_SINCE_NEXT_TEST;
-import static org.apache.maven.surefire.booter.MasterProcessCommand.TEST_SET_FINISHED;
-import static org.apache.maven.surefire.util.internal.DaemonThreadFactory.newDaemonThread;
 import static org.apache.maven.surefire.shared.utils.StringUtils.isBlank;
 import static org.apache.maven.surefire.shared.utils.StringUtils.isNotBlank;
+import static org.apache.maven.surefire.util.internal.DaemonThreadFactory.newDaemonThread;
 
 /**
  * Reader of commands coming from plugin(master) process.
@@ -113,31 +111,13 @@ public final class CommandReader implements CommandChainReader
         }
     }
 
-    /**
-     * @param listener listener called with <b>Any</b> {@link MasterProcessCommand command type}
-     */
-    public void addListener( CommandListener listener )
-    {
-        listeners.add( new BiProperty<MasterProcessCommand, CommandListener>( null, listener ) );
-    }
-
-    public void addTestListener( CommandListener listener )
-    {
-        addListener( RUN_CLASS, listener );
-    }
-
-    @Override
-    public void addTestsFinishedListener( CommandListener listener )
-    {
-        addListener( TEST_SET_FINISHED, listener );
-    }
-
     @Override
     public void addSkipNextTestsListener( CommandListener listener )
     {
         addListener( SKIP_SINCE_NEXT_TEST, listener );
     }
 
+    @Override
     public void addShutdownListener( CommandListener listener )
     {
         addListener( SHUTDOWN, listener );
@@ -156,19 +136,6 @@ public final class CommandReader implements CommandChainReader
     private void addListener( MasterProcessCommand cmd, CommandListener listener )
     {
         listeners.add( new BiProperty<>( cmd, listener ) );
-    }
-
-    @Override
-    public void removeListener( CommandListener listener )
-    {
-        for ( Iterator<BiProperty<MasterProcessCommand, CommandListener>> it = listeners.iterator(); it.hasNext(); )
-        {
-            BiProperty<MasterProcessCommand, CommandListener> listenerWrapper = it.next();
-            if ( listener == listenerWrapper.getP2() )
-            {
-                it.remove();
-            }
-        }
     }
 
     /**

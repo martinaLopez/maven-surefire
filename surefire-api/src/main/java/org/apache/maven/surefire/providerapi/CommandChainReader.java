@@ -29,11 +29,7 @@ public interface CommandChainReader
     boolean awaitStarted()
         throws TestSetFailedException;
 
-    void addTestsFinishedListener( CommandListener listener );
-
     void addSkipNextTestsListener( CommandListener listener );
 
     void addShutdownListener( CommandListener listener );
-
-    void removeListener( CommandListener listener );
 }
