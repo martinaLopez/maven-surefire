@@ -83,6 +83,7 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
     private final WritableBufferedByteChannel out;
     private final RunMode runMode;
     private final AtomicBoolean trouble = new AtomicBoolean();
+    private volatile boolean onExit;
 
     public LegacyMasterProcessChannelEncoder( @Nonnull WritableBufferedByteChannel out )
     {
@@ -116,6 +117,7 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
     @Override
     public void onJvmExit()
     {
+        onExit = true;
         encodeAndPrintEvent( new StringBuilder( "\n" ), true );
     }
 
@@ -318,8 +320,11 @@ public class LegacyMasterProcessChannelEncoder implements MasterProcessChannelEn
         }
         catch ( ClosedChannelException e )
         {
-            DumpErrorSingleton.getSingleton()
-                .dumpException( e, "Channel closed while writing the event '" + event + "'." );
+            if ( !onExit )
+            {
+                DumpErrorSingleton.getSingleton()
+                    .dumpException( e, "Channel closed while writing the event '" + event + "'." );
+            }
         }
         catch ( IOException e )
         {
