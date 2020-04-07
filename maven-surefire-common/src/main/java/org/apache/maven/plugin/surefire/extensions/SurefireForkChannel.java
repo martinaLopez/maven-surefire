@@ -154,7 +154,7 @@ final class SurefireForkChannel extends ForkChannel
                                                    ReadableByteChannel stdOut )
     {
         ReadableByteChannel channel = newBufferedChannel( newInputStream( worker ) );
-        return new EventConsumerThread( "fork-" + getForkChannelId() + "-event-thread-", channel,
+        return new EventConsumerThread( "fork-" + getForkChannelId() + "-event-thread", channel,
             eventHandler, countdownCloseable, logger );
     }
 

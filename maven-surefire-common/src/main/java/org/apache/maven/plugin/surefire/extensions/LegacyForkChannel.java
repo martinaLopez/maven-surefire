@@ -78,7 +78,7 @@ final class LegacyForkChannel extends ForkChannel
                                                    @Nonnull CountdownCloseable countdownCloseable,
                                                    ReadableByteChannel stdOut )
     {
-        return new EventConsumerThread( "fork-" + getForkChannelId() + "-event-thread-", stdOut,
+        return new EventConsumerThread( "fork-" + getForkChannelId() + "-event-thread", stdOut,
             eventHandler, countdownCloseable, logger );
     }
 
